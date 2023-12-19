@@ -31,8 +31,10 @@ This module establishes essential boundary conditions using a pair function, def
 Adjustments to the post-processing of the plugin are necessary, considering the availability of information beyond two points. Options include using regression analysis to determine unknowns of the linear model or employing various homogenization scenarios involving the engineering of the strain energy function. To find the unknowns of these models, optimization algorithms are required.
 
 ## Running the Code
-1. Change Abaqus directory to the plugin directory (`File->Set Work Directory..-> Plugin_directory`).
-2. Run the main file (`File->Run script...->main.py`).
+1. Clone the repo (`git clone https://github.com/Jamal-dev/PBC_nonlinear`)
+2. Change Abaqus directory to the plugin directory (`File->Set Work Directory..-> Plugin_directory`).
+3. Run the main file (`File->Run script...->main.py`).
+4. To change the material properties edit materialLibrary.py
 
 
 This tool automates the evaluation of homogenization scenarios, aiding engineers and researchers in developing accurate and computationally efficient material models for complex simulations.

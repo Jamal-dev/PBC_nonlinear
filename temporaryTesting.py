@@ -2,44 +2,12 @@ import math
 import numpy as np
 import os
 from simulationSettingsMicro import Names
-Names.STRESS_STRAIN_DATA_FILE_NAME = 'avgStrainStressInfoNEOneStep'
-os.chdir(r'D:\Leibniz University\thesis\temp')
-unit_conversion_factor = 1.0
-r_f = 300.0e-3 * unit_conversion_factor
-# volume fraction
-volume_f = 0.4
-# spacing between chords 
-spacing_chords = 0.738117 * unit_conversion_factor
-
-# volume of fiber = pi * (r_f)**2 * 2*a1
-# volume of fibers = num_fibers * volume of fiber = 4 * a1 * pi * (d_f/2)**2
-# volume of RVE = 2a1 * 2a2 * 2a3 = 8 * a1 * a2 * a3
 
 
-a3 = spacing_chords/2.0
-
-a2 = math.pi/(4.0*a3 * volume_f) * (r_f)**2
-
-# a1 can be chosen as arbitarely 
-a1 = a2/4.0
-''' Mesh size parameter change it as per your analysis'''
-mesh_size = spacing_chords/40.0
-
-print('a1 = %f, (length of fiber)                   2 a1=%f'%(round(a1,3),round(2*a1,3)))
-print('a2 = %f, (vertical spacing between fibers)   2 a2=%f'%(round(a2,3),round(2*a2,3)))
-print('a3 = %f, (horizontal spacing between fibers) 2 a3=%f'%(round(a3,3),round(2*a3,3)))
-
-
-# spcifying the other point for the fiber
 
 '''
     ABAQUS part
 '''
-
-Names.a1 = a1
-Names.a2 = a2
-Names.a3 = a3
-Names.r_f = r_f
 
 
 

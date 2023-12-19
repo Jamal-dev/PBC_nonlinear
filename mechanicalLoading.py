@@ -95,42 +95,41 @@ def create_referencePoints(Model,Names):
         a.Set(name='eps' + str(k), referencePoints=(a.referencePoints[a.features['RP-' + str(i+1)].id], ))
 
 
-
-def createBC_loadcases(applied_strains,Names):
+def createBC(Model,model_idx,applied_strains,Names):
     """
-        Create boundary condition for all models as per the applied strain 
+        Create boundary condition for the models as per the applied strain 
         and number of steps
             
         Inputs:
             Model - A model object from a Model Database
+            model_idx - int: 0 to 5
+            applied_strains - dict contains loading of all 6 cases
             Names - Class for global properties
     """
-    # creating boundary conditions for the applied strain loading
-    for model_idx, model_name in enumerate(Names.MODEL_NAMES):
-        Model = abaqus.mdb.models[model_name]
-        a = Model.rootAssembly
-        load_case_name = 'Column-' + str(model_idx+1)
-        applied_strain = applied_strains[load_case_name]
-        for i,k in enumerate(Names.APPLIED_STRAIN_KEYS ):
-            # Writing displacement boundary condition for the values of the applied strain
-            # U1, to write the CE's
-            set_name = 'eps' + str(k)
-            for step_idx, u1 in enumerate(applied_strain[k]):
-                step_name = 'Step-' + str(step_idx+1)
-                name = load_case_name+'-eps' + str(k) + '-Step-' + str(step_idx+1)
-                Model.DisplacementBC(name=name, 
-                                            createStepName=step_name, 
-                                            region=a.sets[set_name], 
-                                            u1=float(u1), 
-                                            u2=const.UNSET, 
-                                            u3=const.UNSET, 
-                                            ur1=const.UNSET, 
-                                            ur2=const.UNSET, 
-                                            ur3=const.UNSET, 
-                                            amplitude=const.UNSET, 
-                                            fixed=const.OFF, 
-                                            distributionType=const.UNIFORM, 
-                                            fieldName='', localCsys=None)
+    a = Model.rootAssembly
+    load_case_name = 'Column-' + str(model_idx+1)
+    applied_strain = applied_strains[load_case_name]
+    for i,k in enumerate(Names.APPLIED_STRAIN_KEYS ):
+        # Writing displacement boundary condition for the values of the applied strain
+        # U1, to write the CE's
+        set_name = 'eps' + str(k)
+        for step_idx, u1 in enumerate(applied_strain[k]):
+            step_name = 'Step-' + str(step_idx+1)
+            name = load_case_name+'-eps' + str(k) + '-Step-' + str(step_idx+1)
+            Model.DisplacementBC(name=name, 
+                                        createStepName=step_name, 
+                                        region=a.sets[set_name], 
+                                        u1=float(u1), 
+                                        u2=const.UNSET, 
+                                        u3=const.UNSET, 
+                                        ur1=const.UNSET, 
+                                        ur2=const.UNSET, 
+                                        ur3=const.UNSET, 
+                                        amplitude=const.UNSET, 
+                                        fixed=const.OFF, 
+                                        distributionType=const.UNIFORM, 
+                                        fieldName='', localCsys=None)
+
 
 def equation_constraint_create_faces(Model,master_set_name, slave_set_name,
                                      prefix_constraint ,
@@ -169,7 +168,7 @@ def PBCsets(Model,Names):
     applyMechanicalPBC(Model=Model,pairsOfNodesetNames=pairsOfNodesetNames,Names=Names)
 
 
-def pipline_3D_periodicity(Model,Names):
+def pipline_3D_periodicity(Model,Names, model_idx=0):
     # creating basic sets
     createBaseSets(Model=Model,Names=Names)
     # creating reference points
@@ -197,11 +196,9 @@ def pipline_3D_periodicity(Model,Names):
                                     master_set_name= Names.NEGATIVE_Z_SUB_NEG_X_SUB_NEG_Y + Names.SORTED_SET_SUFFIX
                                     ,slave_set_name= Names.POSITIVE_Z_SUB_NEG_X_SUB_NEG_Y + Names.SORTED_SET_SUFFIX
                                         ,prefix_constraint = Names.PREFIX_CONSTRAINTS + '_Z' ,coef_eps=-2*Names.a3,eps_column=3)
-    # copy eps11 model to create other models
     
-    for i in range(1,6):
-        abaqus.mdb.Model(name=Names.MODEL_NAMES[i], objectToCopy=abaqus.mdb.models['eps11'])
     
-    #Create boundary conditions    
-    createBC_loadcases(applied_strains=applied_strains,Names=Names)
+    #Create boundary conditions   
+    createBC(Model,model_idx,applied_strains,Names) 
+    
     

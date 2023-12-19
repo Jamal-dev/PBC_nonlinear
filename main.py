@@ -73,23 +73,23 @@ if 'Model-1' in abaqus.mdb.models.keys():
     model_name = Names.MODEL_NAME
 
 
-createdModel = abaqus.mdb.models[model_name]
+eps11_model = abaqus.mdb.models[model_name]
 abaqus.session.journalOptions.setValues(replayGeometry=const.COORDINATE,recoverGeometry=const.COORDINATE)
 # creating initial geometry
-pipeLineInitialGeometry(createdModel,a1,a2,a3,r_f)
+pipeLineInitialGeometry(eps11_model,a1,a2,a3,r_f)
 
 
 # create materials
-create_materials(createdModel=createdModel)
+create_materials(createdModel=eps11_model)
 material_names = {'fiber':'GEW-661344-MARLOW', 'matrix':'BONN-60SHA'}
 
 # creating sections
-createdModel.HomogeneousSolidSection(material=material_names['fiber'], name='Fiber', 
+eps11_model.HomogeneousSolidSection(material=material_names['fiber'], name='Fiber', 
     thickness=None)
-createdModel.HomogeneousSolidSection(material=material_names['matrix'], name='Matrix', 
+eps11_model.HomogeneousSolidSection(material=material_names['matrix'], name='Matrix', 
     thickness=None)
 # Creating a set for the fiber and matrix
-p = createdModel.parts[part_name]
+p = eps11_model.parts[part_name]
 p.Set(cells=
     p.cells.findAt(
         ((0.0,0.0,a3),),  
@@ -113,8 +113,8 @@ p.SectionAssignment(offset=0.0,
     thicknessAssignment=const.FROM_SECTION)
 
 # creating assembly instant
-createdModel.rootAssembly.DatumCsysByDefault(const.CARTESIAN)
-createdModel.rootAssembly.Instance(dependent=const.OFF, name=instance_name, part=p)
+eps11_model.rootAssembly.DatumCsysByDefault(const.CARTESIAN)
+eps11_model.rootAssembly.Instance(dependent=const.OFF, name=instance_name, part=p)
 
 # step
 def createFiniteSteps(model,num_steps):
@@ -136,27 +136,14 @@ def createFiniteSteps(model,num_steps):
         model.steps[current_step_name].control.setValues(timeIncrementation=(4.0, 
             8.0, 9.0, 16.0, 10.0, 4.0, 12.0, 25.0, 6.0, 3.0, 50.0),resetDefaultValues=const.OFF,allowPropagation=const.OFF)
 
-createFiniteSteps(model=createdModel,num_steps=Names.NUM_STEPS_EACH_MODEL[0])
 
-Names.LAST_STEP_NAME = createdModel.steps.keys()[-1]
-
-# createdModel.StaticLinearPerturbationStep(name= load_case_name, previous=
-#                                                             'Initial')
-
-# output requests
-createdModel.fieldOutputRequests['F-Output-1'].setValues(variables=(
-    'NE','LE','E', 'S', 'U', 'IVOL'))
 
 from geometryCreationSingleChord import partitionGeometry
-partitionGeometry(Model=createdModel,r_f=r_f,a1=a1,a2=a2,a3=a3,Names=Names)
-
-
+partitionGeometry(Model=eps11_model,r_f=r_f,a1=a1,a2=a2,a3=a3,Names=Names)
 
 
 # Meshing
-
-
-def meshByQuad(createdModel=createdModel,instance_name=instance_name,mesh_size=mesh_size):
+def meshByQuad(createdModel=eps11_model,instance_name=instance_name,mesh_size=mesh_size):
     elemType1 = mesh.ElemType(elemCode=const.C3D8RH, elemLibrary=const.STANDARD, 
         kinematicSplit=const.AVERAGE_STRAIN, hourglassControl =const.DEFAULT)
     elemType2 = mesh.ElemType(elemCode=const.C3D6, elemLibrary=const.STANDARD)
@@ -171,16 +158,30 @@ def meshByQuad(createdModel=createdModel,instance_name=instance_name,mesh_size=m
         minSizeFactor=0.1)
     a.generateMesh(regions=partInstances)
 
-
-
-
 # createMeshBySweepOneChord(createdModel=createdModel,instance_name=instance_name,mesh_size=mesh_size)
-meshByQuad(createdModel=createdModel,instance_name=instance_name,mesh_size=mesh_size)
-#########################################################################################
-#################### Now comes the part which can remain same for other cases as well####
+meshByQuad(createdModel=eps11_model,instance_name=instance_name,mesh_size=mesh_size)
 
-## tomorrow start working from here
-pipline_3D_periodicity(Model=createdModel,Names=Names)
+
+created_models = {}
+created_models[Names.MODEL_NAMES[0]]=eps11_model
+# copy eps11 model to create other models
+for i in range(1,6):
+    created_models[Names.MODEL_NAMES[i]]=abaqus.mdb.Model(name=Names.MODEL_NAMES[i], objectToCopy=abaqus.mdb.models['eps11'])
+
+Names.LAST_STEP_NAMES = [1,1,1,1,1,1] 
+for i in range(6):
+    createFiniteSteps(model=created_models[Names.MODEL_NAMES[i]],num_steps=Names.NUM_STEPS_EACH_MODEL[i])
+    # output requests
+    created_models[Names.MODEL_NAMES[i]].fieldOutputRequests['F-Output-1'].setValues(variables=(
+        'NE','LE','E', 'S', 'U', 'IVOL'))
+    Names.LAST_STEP_NAMES = created_models[Names.MODEL_NAMES[i]].steps.keys()[-1]
+    pipline_3D_periodicity(Model=created_models[Names.MODEL_NAMES[i]],Names=Names,model_idx=i)
+
+Names.LAST_STEP_NAME = eps11_model.steps.keys()[-1]
+
+
+
+
 # create job
 # create job for all models
 job_names = []
@@ -196,8 +197,11 @@ for mdl_name in Names.MODEL_NAMES:
 
 Names.JOB_NAMES = job_names
 # submit job
-# for job_name in job_names:
-#     abaqus.mdb.jobs[job_name].submit(consistencyChecking=const.OFF)
+for job_name in job_names:
+    abaqus.mdb.jobs[job_name].submit(consistencyChecking=const.OFF)
 
+# waiting for it to complete
+for job_name in job_name:
+    abaqus.mdb.jobs[job_name].waitForCompletion()
 # create PINNED BC at the center of the RVE Or do not create it
-# execPyFile('post_process_micro_single_chord.py')
+execPyFile('writeStressStrainData.py')
