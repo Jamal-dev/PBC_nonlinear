@@ -201,7 +201,7 @@ for job_name in job_names:
     abaqus.mdb.jobs[job_name].submit(consistencyChecking=const.OFF)
 
 # waiting for it to complete
-for job_name in job_name:
+for job_name in job_names:
     abaqus.mdb.jobs[job_name].waitForCompletion()
 # create PINNED BC at the center of the RVE Or do not create it
 execPyFile('writeStressStrainData.py')
